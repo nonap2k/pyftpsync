@@ -396,13 +396,10 @@ class PlainTest(unittest.TestCase):
         # scheme is case-insensitive
         t = make_target(scheme.upper() + "://ftp.example.com/target/folder")
         self.assertTrue(isinstance(t, FtpTarget))
-<<<<<<< HEAD
         self.assertEqual(t.host, "ftp.example.com")
         self.assertEqual(t.root_dir, "/target/folder")
         self.assertEqual(t.username, None)
         self.assertEqual(t.tls, tls)
-=======
->>>>>>> master
 
         # pass credentials wit URL
         t = make_target(scheme +

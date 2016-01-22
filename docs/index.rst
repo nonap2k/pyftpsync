@@ -52,6 +52,7 @@ Features
   * This is a command line tool...
   * ... and a library for use in your Python projects.
   * Upload, download, and bi-directional synch mode.
+  * FTPS (TLS) support on Python 2.7/3.2+.
   * Allows FTP-to-FTP and Filesystem-to-Filesystem synchronization as well.
   * Architecture is open to add other target types.
 
@@ -59,14 +60,14 @@ Known limitations
 -----------------
 
   * The FTP server must support the `MLST command <http://tools.ietf.org/html/rfc3659>`_.
-  * pyftpsync uses file size and modification dates to detect file changes. 
+  * pyftpsync uses file size and modification dates to detect file changes.
     This is efficient, but not as robust as CRC checksums could be.
-  * pyftpsync tries to detect conflicts (i.e. simultaneous modifications of 
+  * pyftpsync tries to detect conflicts (i.e. simultaneous modifications of
     local and remote targets) by storing last sync time and size in a separate
     meta data file inside the local folders. This is not bullet proof and may
     fail under some conditions.
 
-  In short: pyftpsync is not (nor tries to be a replacement for) a distributed 
+  In short: pyftpsync is not (nor tries to be a replacement for) a distributed
   version control system. Make sure you have backups.
 
 
@@ -79,9 +80,9 @@ Quickstart
 .. todo::
    There will be a MSI installer available for Windows.
 
-*Requirements:* `Python <http://www.python.org/download/ Python>`_ 2.6+ or 3 is required. 
+*Requirements:* `Python <http://www.python.org/download/ Python>`_ 2.6+ or 3 is required.
 
-Releases are hosted on `PyPI <https://pypi.python.org/pypi/pyftpsync>`_ and can 
+Releases are hosted on `PyPI <https://pypi.python.org/pypi/pyftpsync>`_ and can
 be installed using `pip <http://www.pip-installer.org/>`_ or
 `EasyInstall <http://pypi.python.org/pypi/setuptools#using-setuptools-and-easyinstall>`_::
 
@@ -108,9 +109,9 @@ Use the ``--help`` or ``-h`` argument to get help::
     $ pyftpsync -h
     usage: pyftpsync [-h] [--verbose | --quiet] [--version] [--progress]
                      {upload,download,sync} ...
-    
+
     Synchronize folders over FTP.
-    
+
     positional arguments:
       {upload,download,sync}
                             sub-command help
@@ -119,14 +120,14 @@ Use the ``--help`` or ``-h`` argument to get help::
                             local target
         sync                synchronize new and modified files between remote
                             folder and local target
-    
+
     optional arguments:
       -h, --help            show this help message and exit
       --verbose, -v         increment verbosity by one (default: 3, range: 0..5)
       --quiet, -q           decrement verbosity by one
       --version             show program's version number and exit
       --progress, -p        show progress info, even if redirected or verbose < 3
-   $ 
+   $
 
 
 Upload files syntax
@@ -140,11 +141,11 @@ Command specific help is available like so::
                             [--force] [--resolve {local,skip,ask}] [--delete]
                             [--delete-unmatched]
                             LOCAL REMOTE
-    
+
     positional arguments:
       LOCAL                 path to local folder (default: .)
       REMOTE                path to remote folder
-    
+
     optional arguments:
       -h, --help            show this help message and exit
       -x, --execute         turn off the dry-run mode (which is ON by default),
@@ -171,19 +172,21 @@ Command specific help is available like so::
 Example: Upload files
 ---------------------
 
-Upload all new and modified files from user's temp folder to an FTP server. 
+Upload all new and modified files from user's temp folder to an FTP server.
 No files are changed on the local directory::
 
-  $ pyftpsync upload ~/temp ftp://example.com/target/folder
+  $ pyftpsync upload ~/temp ftps://example.com/target/folder
 
-Add the ``--delete`` option to remove all files from the remote target that 
+Add the ``--delete`` option to remove all files from the remote target that
 don't exist locally::
 
-  $ pyftpsync upload ~/temp ftp://example.com/target/folder --delete
+  $ pyftpsync upload ~/temp ftps://example.com/target/folder --delete
 
 Add the ``-x`` option to switch from DRY-RUN mode to real execution::
 
-  $ pyftpsync upload ~/temp ftp://example.com/target/folder --delete -x
+  $ pyftpsync upload ~/temp ftps://example.com/target/folder --delete -x
+
+Replace ``ftps://`` with ``ftp://`` to disable TLS encryption.
 
 
 Synchronize files syntax
@@ -195,11 +198,11 @@ Synchronize files syntax
                           [--store-password] [--no-prompt] [--no-color]
                           [--resolve {old,new,local,remote,skip,ask}]
                           LOCAL REMOTE
-    
+
     positional arguments:
       LOCAL                 path to local folder (default: .)
       REMOTE                path to remote folder
-    
+
     optional arguments:
       -h, --help            show this help message and exit
       -x, --execute         turn off the dry-run mode (which is ON by default),
@@ -222,7 +225,7 @@ Example: Synchronize folders
 
 Two-way synchronization of a local folder with an FTP server::
 
-  $ pyftpsync sync --store-password --resolve=ask --execute ~/temp ftp://example.com/target/folder
+  $ pyftpsync sync --store-password --resolve=ask --execute ~/temp ftps://example.com/target/folder
 
 
 Script examples
@@ -236,7 +239,7 @@ Upload changes from local folder to FTP server::
   local = FsTarget("~/temp")
   user ="joe"
   passwd = "secret"
-  remote = FtpTarget("/temp", "example.com", user, passwd)
+  remote = FtpTarget("/temp", "example.com", user, passwd, tls=True)
   opts = {"force": False, "delete_unmatched": True, "verbose": 3, "dry_run" : False}
   s = UploadSynchronizer(local, remote, opts)
   s.run()
@@ -249,7 +252,7 @@ Synchronize local folder with FTP server::
   local = FsTarget("~/temp")
   user ="joe"
   passwd = "secret"
-  remote = FtpTarget("/temp", "example.com", user, passwd)
+  remote = FtpTarget("/temp", "example.com", user, passwd, tls=True)
   opts = {"resolve": "skip", "verbose": 1, "dry_run" : False}
   s = BiDirSynchronizer(local, remote, opts)
   s.run()
@@ -299,5 +302,5 @@ Indices and tables
    :target: http://pyftpsync.readthedocs.org/en/latest/
    :alt: Documentation Status
 
-.. |nbsp| unicode:: 0xA0 
+.. |nbsp| unicode:: 0xA0
    :trim:

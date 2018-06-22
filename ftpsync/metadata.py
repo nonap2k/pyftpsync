@@ -8,7 +8,7 @@ import json
 import time
 
 from ftpsync import __version__
-from ftpsync.util import pretty_stamp, str_to_bool, get_option, write, write_error
+from ftpsync.util import _logger, pretty_stamp, str_to_bool, get_option
 
 
 PYFTPSYNC_VERBOSE_META = str_to_bool(
@@ -128,7 +128,7 @@ class DirMetadata(object):
         # except IncompatibleMetadataVersion:
         #     raise  # We want version errors to terminate the app
         except Exception as e:
-            write_error("Could not read meta info {}: {!r}".format(self, e))
+            _logger.error("Could not read meta info {}: {!r}".format(self, e))
 
         # If the version is incompatible, we stop, unless:
         # if --migrate is set, we simply ignore this file (and probably replace it
@@ -140,8 +140,8 @@ class DirMetadata(object):
                     "Consider passing --migrate to discard old data."
                     .format(self.dir.get("_file_version"), self.VERSION))
             #
-            write("Migrating meta data version from {} to {} (discarding old): {}"
-                  .format(self.dir.get("_file_version"), self.VERSION, self.filename))
+            _logger.info("Migrating meta data version from {} to {} (discarding old): {}"
+                         .format(self.dir.get("_file_version"), self.VERSION, self.filename))
             self.list = {}
             self.peer_sync = {}
 

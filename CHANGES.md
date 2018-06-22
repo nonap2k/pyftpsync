@@ -2,6 +2,7 @@
 ------------------
 - Allow `-v` with `--version` option.
 - #26: Crash when not setting verbose option.
+- Refactor logging: TODO
 
 2.0.0 (2018-01-01)
 ------------------

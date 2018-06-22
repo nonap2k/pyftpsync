@@ -7,7 +7,7 @@ from datetime import datetime
 import os
 from posixpath import join as join_url, normpath as normpath_url, relpath as relpath_url
 
-from ftpsync.util import eps_compare, write
+from ftpsync.util import eps_compare, _logger
 
 
 PRINT_CLASSIFICATIONS = False
@@ -157,7 +157,7 @@ class EntryPair(object):
             raise RuntimeError("Undefined operation for pair classification {}".format(c_pair))
 
         if PRINT_CLASSIFICATIONS:
-            write("classify {}".format(self))
+            _logger.debug("classify {}".format(self))
         # if not entry.meta:
         # assert self.classification in PAIR_CLASSIFICATIONS
         assert self.operation in PAIR_OPERATIONS
@@ -306,7 +306,7 @@ class _Resource(object):
                 self.classification = "existing"
 
         if PRINT_CLASSIFICATIONS:
-            write("classify {}".format(self))
+            _logger.debug("classify {}".format(self))
         assert self.classification in ENTRY_CLASSIFICATIONS
         return self.classification
 

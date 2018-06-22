@@ -13,7 +13,7 @@ import threading
 from ftpsync import compat
 from ftpsync.metadata import DirMetadata
 from ftpsync.resources import DirectoryEntry, FileEntry
-from ftpsync.util import write
+from ftpsync.util import _logger
 
 
 # ===============================================================================
@@ -123,7 +123,7 @@ class _Target(object):
         if not self.connected:
             return
         if self.get_option("verbose", 3) >= 5:
-            write("Closing target {}.".format(self))
+            _logger.debug("Closing target {}.".format(self))
         self.connected = False
         self.readonly = False  # issue #20
         self._rlock.release()

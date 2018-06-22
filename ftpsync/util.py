@@ -17,73 +17,100 @@ from ftpsync import compat
 from ftpsync.compat import CompatFileNotFoundError
 
 
-_logger = None
+#: The base logger (silent by default)
+BASE_LOGGER_NAME = "pyftpsync"
+_logger = logging.getLogger(BASE_LOGGER_NAME)
 
 
 PYTHON_VERSION = "{}.{}.{}".format(sys.version_info[0], sys.version_info[1], sys.version_info[2])
 
-
-def get_pyftpsync_logger():
-    return _logger
-
-
-def set_pyftpsync_logger(logger=True):
-    """Define target for common output.
-
-    Args:
-        logger (bool | None | logging.Logger):
-            Pass None to use `print()` to stdout instead of logging.
-            Pass True to create a simple standard logger.
-    """
-    global _logger
-    prev_logger = _logger
-    if logger is True:
-        logging.basicConfig(level=logging.INFO)
-        _logger = logging.getLogger("pyftpsync")
-        _logger.setLevel(logging.DEBUG)
-    else:
-        _logger = logger
-    return prev_logger
-
-
-# Init default logger
-set_pyftpsync_logger(True)
-
-
-def write(*args, **kwargs):
-    """Redirectable wrapper for print statements."""
-    if _logger:
-        kwargs.pop("end", None)
-        kwargs.pop("file", None)
-        _logger.info(*args, **kwargs)
-    else:
-        print(*args, **kwargs)
-
-
-def write_error(*args, **kwargs):
-    """Redirectable wrapper for print sys.stderr statements."""
-    if _logger:
-        kwargs.pop("end", None)
-        kwargs.pop("file", None)
-        _logger.error(*args, **kwargs)
-    else:
-        print(*args, file=sys.stderr, **kwargs)
+# def get_pyftpsync_logger():
+#     return _logger
+#
+#
+# def set_pyftpsync_logger(logger=True):
+#     """Define target for common output.
+#
+#     Args:
+#         logger (bool | None | logging.Logger):
+#             Pass None to use `print()` to stdout instead of logging.
+#             Pass True to create a simple standard logger.
+#     """
+#     global _logger
+#     prev_logger = _logger
+#     if logger is True:
+#         logging.basicConfig(level=logging.INFO)
+#         _logger = logging.getLogger("pyftpsync")
+#         _logger.setLevel(logging.DEBUG)
+#     else:
+#         _logger = logger
+#     return prev_logger
+#
+#
+# # Init default logger
+# set_pyftpsync_logger(True)
+#
+#
+# def write(*args, **kwargs):
+#     """Redirectable wrapper for print statements."""
+#     if _logger:
+#         kwargs.pop("end", None)
+#         kwargs.pop("file", None)
+#         _logger.info(*args, **kwargs)
+#     else:
+#         print(*args, **kwargs)
+#
+#
+# def write_error(*args, **kwargs):
+#     """Redirectable wrapper for print sys.stderr statements."""
+#     if _logger:
+#         kwargs.pop("end", None)
+#         kwargs.pop("file", None)
+#         _logger.error(*args, **kwargs)
+#     else:
+#         print(*args, file=sys.stderr, **kwargs)
 
 
 try:
     import colorama  # provide color codes, ...
     colorama.init()  # improve color handling on windows terminals
 except ImportError:
-    write_error("Unable to import 'colorama' library: Colored output is not available. "
-                "Try `pip install colorama`.")
+    _logger.error("Unable to import 'colorama' library: Colored output is not available. "
+                  "Try `pip install colorama`.")
     colorama = None
 
+
 try:
+    logging.getLogger("keyring").setLevel(logging.WARNING)
     import keyring
 except ImportError:
-    write_error("Unable to import 'keyring' library: Storage of passwords is not available. "
-                "Try `pip install keyring`.")
+    _logger.error("Unable to import 'keyring' library: Storage of passwords is not available. "
+                  "Try `pip install keyring`.")
     keyring = None
+
+# # We import this later, when we know the verbosity level
+# keyring = None
+#
+# def init_imports(verbose=3):
+#     if verbose >= 5:
+#         lib_log_level = logging.DEBUG
+#     elif verbose >= 3:
+#         lib_log_level = logging.INFO
+#     elif verbose >= 2:
+#         lib_log_level = logging.WARNING
+#     elif verbose >= 1:
+#         lib_log_level = logging.ERROR
+#     else:
+#         lib_log_level = logging.CRITICAL
+#
+#     try:
+#         logging.getLogger("keyring").setLevel(lib_log_level)
+#         import keyring
+#     except ImportError:
+#         _logger.error("Unable to import 'keyring' library: "
+#                       "Storage of passwords is not available. "
+#                       "Try `pip install keyring`.")
+#         keyring = None
 
 
 DEFAULT_CREDENTIAL_STORE = "pyftpsync.pw"
@@ -225,7 +252,7 @@ def get_credentials_for_url(url, opts, force_user=None):
 #        except keyring.errors.TransientKeyringError:
         except Exception as e:
             # e.g. user clicked 'no'
-            write_error("Could not get password from keyring {}".format(e))
+            _logger.error("Could not get password from keyring {}".format(e))
 
     # Query .netrc file
 #     print(opts)
@@ -237,7 +264,7 @@ def get_credentials_for_url(url, opts, force_user=None):
             if verbose >= 4:
                 write("Could not get password (no .netrc file).")
         except Exception as e:
-            write_error("Could not read .netrc: {}.".format(e))
+            _logger.error("Could not read .netrc: {}.".format(e))
 
         if authenticators:
             creds = (authenticators[0], authenticators[2])

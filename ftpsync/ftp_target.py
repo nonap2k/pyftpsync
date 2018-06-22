@@ -6,6 +6,7 @@ Licensed under the MIT license: http://www.opensource.org/licenses/mit-license.p
 import calendar
 import ftplib
 import json
+import logging
 import os
 from posixpath import join as join_url, normpath as normpath_url, relpath as relpath_url
 import time
@@ -15,8 +16,9 @@ from ftpsync.compat import CompatConnectionError
 from ftpsync.metadata import DirMetadata, IncompatibleMetadataVersion
 from ftpsync.resources import DirectoryEntry, FileEntry
 from ftpsync.targets import _Target
-from ftpsync.util import get_credentials_for_url, prompt_for_password, \
-    save_password, write, write_error
+from ftpsync.util import get_credentials_for_url, prompt_for_password, save_password
+
+_logger = logging.getLogger("pyftpsync").getChild(__name__)
 
 
 # ===============================================================================
@@ -57,7 +59,7 @@ class FtpTarget(_Target):
             try:
                 self.ftp = ftplib.FTP_TLS()
             except AttributeError:
-                write("Python 2.7/3.2+ required for FTPS (TLS).")
+                _logger.warn("Python 2.7/3.2+ required for FTPS (TLS).")
                 raise
         else:
             self.ftp = ftplib.FTP()
@@ -118,16 +120,16 @@ class FtpTarget(_Target):
                 # Login (as 'anonymous' if self.username is undefined):
                 self.ftp.login(self.username, self.password)
                 if self.get_option("verbose", 3) >= 4:
-                    write("Login as '{}'."
-                          .format(self.username if self.username else "anonymous"))
+                    _logger.info("Login as '{}'."
+                                 .format(self.username if self.username else "anonymous"))
                 break
             except ftplib.error_perm as e:
                 # If credentials were passed, but authentication fails, prompt
                 # for new password
                 if not e.args[0].startswith("530"):
                     raise  # error other then '530 Login incorrect'
-                write_error("Could not login to {}@{}: {}"
-                            .format(self.username, self.host, e))
+                _logger.error("Could not login to {}@{}: {}"
+                              .format(self.username, self.host, e))
                 if no_prompt or not self.username:
                     raise
                 creds = prompt_for_password(self.host, self.username)
@@ -145,8 +147,8 @@ class FtpTarget(_Target):
             # for new password
             if not e.args[0].startswith("550"):
                 raise  # error other then 550 No such directory'
-            write_error("Could not change directory to {} ({}): missing permissions?"
-                        .format(self.root_dir, e))
+            _logger.error("Could not change directory to {} ({}): missing permissions?"
+                          .format(self.root_dir, e))
 
         pwd = self.ftp.pwd()
         if pwd != self.root_dir:
@@ -176,7 +178,7 @@ class FtpTarget(_Target):
             try:
                 self.ftp.quit()
             except (CompatConnectionError, EOFError) as e:
-                write_error("ftp.quit() failed: {}".format(e))
+                _logger.error("ftp.quit() failed: {}".format(e))
             self.ftp_socket_connected = False
 
         super(FtpTarget, self).close()
@@ -193,13 +195,13 @@ class FtpTarget(_Target):
             self.lock_data = data
         except Exception as e:
             errmsg = "{}".format(e)
-            write_error("Could not write lock file: {}".format(errmsg))
+            _logger.error("Could not write lock file: {}".format(errmsg))
             if errmsg.startswith("550") and self.ftp.passiveserver:
                 try:
                     self.ftp.makepasv()
                 except Exception:
-                    write_error("The server probably requires FTP Active mode. "
-                                "Try passing the --ftp-active option.")
+                    _logger.error("The server probably requires FTP Active mode. "
+                                  "Try passing the --ftp-active option.")
 
             # Set to False, so we don't try to remove later
             self.lock_data = False
@@ -212,17 +214,16 @@ class FtpTarget(_Target):
         try:
             if self.cur_dir != self.root_dir:
                 if closing:
-                    write("Changing to ftp root folder to remove lock file: {}"
-                          .format(self.root_dir))
+                    _logger.info("Changing to ftp root folder to remove lock file: {}"
+                                 .format(self.root_dir))
                     self.cwd(self.root_dir)
                 else:
-                    write_error("Could not remove lock file, because CWD != ftp root: {}"
-                                .format(self.cur_dir))
+                    _logger.error("Could not remove lock file, because CWD != ftp root: {}"
+                                  .format(self.cur_dir))
                     return
 
             if self.lock_data is False:
-                if self.get_option("verbose", 3) >= 4:
-                    write("Skip remove lock file (was not written).")
+                _logger.debug("Skip remove lock file (was not written).")
             else:
                 # direct delete, without updating metadata or checking for target access:
                 self.ftp.delete(DirMetadata.LOCK_FILE_NAME)
@@ -230,14 +231,13 @@ class FtpTarget(_Target):
 
             self.lock_data = None
         except Exception as e:
-            write_error("Could not remove lock file: {}".format(e))
+            _logger.error("Could not remove lock file: {}".format(e))
             raise
 
     def _probe_lock_file(self, reported_mtime):
         """Called by get_dir"""
         delta = reported_mtime - self.lock_data["lock_time"]
-        if self.get_option("verbose", 3) >= 4:
-            write("Server time offset: {0:.2f} seconds".format(delta))
+        _logger.debug("Server time offset: {0:.2f} seconds".format(delta))
 
     def get_id(self):
         return self.host + self.root_dir
@@ -283,7 +283,8 @@ class FtpTarget(_Target):
                         # try to delete this as a file
                         self.ftp.delete(name)
                     except ftplib.all_errors as _e:
-                        write("    ftp.delete({}) failed: {}, trying rmdir()...".format(name, _e))
+                        _logger.info("    ftp.delete({}) failed: {}, trying rmdir()..."
+                                     .format(name, _e))
                         # assume <name> is a folder
                         self.rmdir(name)
             finally:
@@ -351,7 +352,7 @@ class FtpTarget(_Target):
         try:
             self.ftp.retrlines("MLSD", _addline)
         except ftplib.error_perm as e:
-            # write_error("The FTP server responded with {}".format(e))
+            # _logger.error("The FTP server responded with {}".format(e))
             # raises error_perm "500 Unknown command" if command is not supported
             if "500" in str(e.args):
                 raise RuntimeError("The FTP server does not support the 'MLSD' command.")
@@ -366,7 +367,7 @@ class FtpTarget(_Target):
             except IncompatibleMetadataVersion:
                 raise  # this should end the script (user should pass --migrate)
             except Exception as e:
-                write_error("Could not read meta info {}: {}" .format(self.cur_dir_meta, e))
+                _logger.error("Could not read meta info {}: {}" .format(self.cur_dir_meta, e))
 
             meta_files = self.cur_dir_meta.list
 
@@ -392,12 +393,12 @@ class FtpTarget(_Target):
                         #   2. the reported files size is different than the
                         #      size we stored in the meta-data
                         if self.get_option("verbose", 3) >= 5:
-                            write(("META: Removing outdated meta entry {}\n" +
-                                   "      modified after upload ({} > {}), or\n"
-                                   "      cur. size ({}) != meta size ({})")
-                                  .format(n, time.ctime(entry_map[n].mtime),
-                                          time.ctime(upload_time),
-                                          entry_map[n].size, meta.get("s")))
+                            _logger.debug(("META: Removing outdated meta entry {}\n" +
+                                           "      modified after upload ({} > {}), or\n"
+                                           "      cur. size ({}) != meta size ({})")
+                                          .format(n, time.ctime(entry_map[n].mtime),
+                                                  time.ctime(upload_time),
+                                                  entry_map[n].size, meta.get("s")))
                         missing.append(n)
                 else:
                     # File is stored in meta-data, but no longer exists on FTP server

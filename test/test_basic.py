@@ -9,7 +9,6 @@ import unittest
 
 from ftpsync.ftp_target import FtpTarget
 from ftpsync.targets import DirMetadata, make_target
-from ftpsync.util import set_pyftpsync_logger, write, write_error
 from test.fixture_tools import is_test_file, get_test_folder, \
     _SyncTestBase, get_metadata, PYFTPSYNC_TEST_FOLDER, read_test_file
 

@@ -9,13 +9,19 @@ import unittest
 
 from ftpsync.ftp_target import FtpTarget
 from ftpsync.targets import DirMetadata, make_target
-from test.fixture_tools import is_test_file, get_test_folder, \
-    _SyncTestBase, get_metadata, PYFTPSYNC_TEST_FOLDER, read_test_file
-
+from test.fixture_tools import (
+    is_test_file,
+    get_test_folder,
+    _SyncTestBase,
+    get_metadata,
+    PYFTPSYNC_TEST_FOLDER,
+    read_test_file,
+)
 
 # ===============================================================================
 # FixtureTest
 # ===============================================================================
+
 
 class FixtureTest(_SyncTestBase):
     """Test the preconditions of the _SyncTestBase."""
@@ -30,12 +36,14 @@ class FixtureTest(_SyncTestBase):
     def test_prepare_initial_synced_fixture(self):
         # """Test that fixture set up code worked."""
         # Fixtures are initialized to 9 top-level files and 7 folders, all 12:00:00
-        self.assert_test_folder_equal(get_test_folder("local"),
-                                      _SyncTestBase.local_fixture_unmodified)
+        self.assert_test_folder_equal(
+            get_test_folder("local"), _SyncTestBase.local_fixture_unmodified
+        )
 
         # setUp() should have created a copy of /local in /remote
-        self.assert_test_folder_equal(get_test_folder("remote"),
-                                      _SyncTestBase.local_fixture_unmodified)
+        self.assert_test_folder_equal(
+            get_test_folder("remote"), _SyncTestBase.local_fixture_unmodified
+        )
 
         # Metadata files are created on local target only
         self.assertTrue(is_test_file("local/" + DirMetadata.META_FILE_NAME))
@@ -59,11 +67,13 @@ class FixtureTest(_SyncTestBase):
         #
         self._prepare_modified_fixture()
 
-        self.assert_test_folder_equal(get_test_folder("local"),
-                                      _SyncTestBase.local_fixture_modified)
+        self.assert_test_folder_equal(
+            get_test_folder("local"), _SyncTestBase.local_fixture_modified
+        )
 
-        self.assert_test_folder_equal(get_test_folder("remote"),
-                                      _SyncTestBase.remote_fixture_modified)
+        self.assert_test_folder_equal(
+            get_test_folder("remote"), _SyncTestBase.remote_fixture_modified
+        )
 
         # Metadata files are created on local target only
         self.assertTrue(is_test_file("local/" + DirMetadata.META_FILE_NAME))
@@ -75,6 +85,7 @@ class FixtureTest(_SyncTestBase):
 # ===============================================================================
 class PlainTest(unittest.TestCase):
     """Tests that don't connect."""
+
     def setUp(self):
         # user, passwd = get_stored_credentials("pyftpsync.pw", self.HOST)
         pass
@@ -127,27 +138,30 @@ class PlainTest(unittest.TestCase):
 
     def test_logging(self):
         import logging
-        import logging.handlers
         import os
 
         # Create and use a custom logger
-        custom_logger = logging.getLogger("pyftpsync_test")
+        _logger = logging.getLogger("pyftpsync")
+        # custom_logger = logging.getLogger("pyftpsync_test")
         log_path = os.path.join(PYFTPSYNC_TEST_FOLDER, "pyftpsync.log")
         handler = logging.handlers.WatchedFileHandler(log_path)
         # formatter = logging.Formatter(logging.BASIC_FORMAT)
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         handler.setFormatter(formatter)
-        custom_logger.addHandler(handler)
-        set_pyftpsync_logger(custom_logger)
+        _logger.addHandler(handler)
+        # custom_logger.addHandler(handler)
+        # set_pyftpsync_logger(custom_logger)
 
-        custom_logger.setLevel(logging.DEBUG)
+        _logger.setLevel(logging.DEBUG)
         print("print 1")
-        write("write info 1")
-        write_error("write error 1")
+        _logger.info("write info 1")
+        _logger.error("write error 1")
 
-        custom_logger.setLevel(logging.WARNING)
-        write("write info 2")
-        write_error("write error 2")
+        _logger.setLevel(logging.WARNING)
+        _logger.info("write info 2")
+        _logger.error("write error 2")
 
         handler.flush()
         log_data = read_test_file("pyftpsync.log")
@@ -157,7 +171,7 @@ class PlainTest(unittest.TestCase):
         assert "write info 2" not in log_data, "Loglevel honored"
         assert "write error 2" in log_data
         # Cleanup properly (log file would be locked otherwise)
-        custom_logger.removeHandler(handler)
+        _logger.removeHandler(handler)
         handler.close()
 
 

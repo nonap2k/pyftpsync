@@ -1,8 +1,17 @@
-2.0.1 (unreleased)
+2.1.1 (unreleased)
+------------------
+- 
+
+2.1.0 (2018-08-25)
 ------------------
 - Allow `-v` with `--version` option.
-- #26: Crash when not setting verbose option.
-- Refactor logging: TODO
+- Fix #26: Crash when not setting verbose option.
+- Print SYST and FEAT when -vv is passed
+- Accept list type options for `exclude` argument in CLI mode
+- Apply and enforce Black formatter
+- Fix #27: Download- and UploadSynchronizer honor `--delete` flag for all 
+  conditions.<br>
+  **NOTE:** default settings will no longer delete files for up- and downloads.
 
 2.0.0 (2018-01-01)
 ------------------

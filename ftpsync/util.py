@@ -6,12 +6,12 @@ Licensed under the MIT license: http://www.opensource.org/licenses/mit-license.p
 
 from __future__ import print_function
 
-from datetime import datetime
 import getpass
+import logging
 import netrc
 import os
 import sys
-import logging
+from datetime import datetime
 
 from ftpsync import compat
 from ftpsync.compat import CompatFileNotFoundError
@@ -22,7 +22,9 @@ BASE_LOGGER_NAME = "pyftpsync"
 _logger = logging.getLogger(BASE_LOGGER_NAME)
 
 
-PYTHON_VERSION = "{}.{}.{}".format(sys.version_info[0], sys.version_info[1], sys.version_info[2])
+PYTHON_VERSION = "{}.{}.{}".format(
+    sys.version_info[0], sys.version_info[1], sys.version_info[2]
+)
 
 # def get_pyftpsync_logger():
 #     return _logger
@@ -73,10 +75,13 @@ PYTHON_VERSION = "{}.{}.{}".format(sys.version_info[0], sys.version_info[1], sys
 
 try:
     import colorama  # provide color codes, ...
+
     colorama.init()  # improve color handling on windows terminals
 except ImportError:
-    _logger.error("Unable to import 'colorama' library: Colored output is not available. "
-                  "Try `pip install colorama`.")
+    _logger.error(
+        "Unable to import 'colorama' library: Colored output is not available. "
+        "Try `pip install colorama`."
+    )
     colorama = None
 
 
@@ -84,8 +89,10 @@ try:
     logging.getLogger("keyring").setLevel(logging.WARNING)
     import keyring
 except ImportError:
-    _logger.error("Unable to import 'keyring' library: Storage of passwords is not available. "
-                  "Try `pip install keyring`.")
+    _logger.error(
+        "Unable to import 'keyring' library: Storage of passwords is not available. "
+        "Try `pip install keyring`."
+    )
     keyring = None
 
 # # We import this later, when we know the verbosity level
@@ -115,7 +122,7 @@ except ImportError:
 
 DEFAULT_CREDENTIAL_STORE = "pyftpsync.pw"
 DRY_RUN_PREFIX = "(DRY-RUN) "
-IS_REDIRECTED = (os.fstat(0) != os.fstat(1))
+IS_REDIRECTED = os.fstat(0) != os.fstat(1)
 # DEFAULT_BLOCKSIZE = 8 * 1024
 VT_ERASE_LINE = "\x1b[2K"
 
@@ -180,6 +187,7 @@ def check_cli_verbose(default=3):
 #
 # ===============================================================================
 
+
 def prompt_for_password(url, user=None, default_user=None):
     """Prompt for username and password.
 
@@ -199,13 +207,15 @@ def prompt_for_password(url, user=None, default_user=None):
     if user is None:
         default_user = default_user or getpass.getuser()
         while user is None:
-            user = compat.console_input("Enter username for {} [{}]: "
-                                        .format(url, default_user))
+            user = compat.console_input(
+                "Enter username for {} [{}]: ".format(url, default_user)
+            )
             if user.strip() == "" and default_user:
                 user = default_user
     if user:
-        pw = getpass.getpass("Enter password for {}@{} (Ctrl+C to abort): "
-                             .format(user, url))
+        pw = getpass.getpass(
+            "Enter password for {}@{} (Ctrl+C to abort): ".format(user, url)
+        )
         if pw or pw == "":
             return (user, pw)
     return None
@@ -226,15 +236,18 @@ def get_credentials_for_url(url, opts, force_user=None):
     if force_user and not allow_prompt:
         raise RuntimeError(
             "Cannot get credentials for a distinct user ({}) from keyring or .netrc and "
-            "prompting is disabled.".format(force_user))
+            "prompting is disabled.".format(force_user)
+        )
 
     # Lookup our own pyftpsync 1.x credential store. This is deprecated with 2.x
     home_path = os.path.expanduser("~")
     file_path = os.path.join(home_path, DEFAULT_CREDENTIAL_STORE)
     if os.path.isfile(file_path):
         raise RuntimeError(
-            "Custom password files are no longer supported. Delete {} and use .netrc instead."
-            .format(file_path))
+            "Custom password files are no longer supported. Delete {} and use .netrc instead.".format(
+                file_path
+            )
+        )
 
     # Query keyring database
     if creds is None and keyring and allow_keyring:
@@ -243,35 +256,43 @@ def get_credentials_for_url(url, opts, force_user=None):
             c = keyring.get_password("pyftpsync", url)
             if c is not None:
                 creds = c.split(":", 1)
-                write("Using credentials from keyring('pyftpsync', '{}'): {}:***."
-                      .format(url, creds[0]))
+                _logger.info(
+                    "Using credentials from keyring('pyftpsync', '{}'): {}:***.".format(
+                        url, creds[0]
+                    )
+                )
             else:
                 if verbose >= 4:
-                    write("No credentials found in keyring('pyftpsync', '{}')."
-                          .format(url))
-#        except keyring.errors.TransientKeyringError:
+                    _logger.info(
+                        "No credentials found in keyring('pyftpsync', '{}').".format(
+                            url
+                        )
+                    )
+        #        except keyring.errors.TransientKeyringError:
         except Exception as e:
             # e.g. user clicked 'no'
             _logger.error("Could not get password from keyring {}".format(e))
 
     # Query .netrc file
-#     print(opts)
+    #     print(opts)
     if creds is None and allow_netrc:
         try:
             authenticators = None
             authenticators = netrc.netrc().authenticators(url)
         except CompatFileNotFoundError:
             if verbose >= 4:
-                write("Could not get password (no .netrc file).")
+                _logger.info("Could not get password (no .netrc file).")
         except Exception as e:
             _logger.error("Could not read .netrc: {}.".format(e))
 
         if authenticators:
             creds = (authenticators[0], authenticators[2])
-            write("Using credentials from .netrc file: {}:***.".format(creds[0]))
+            _logger.info("Using credentials from .netrc file: {}:***.".format(creds[0]))
         else:
             if verbose >= 4:
-                write("Could not find entry for '{}' in .netrc file.".format(url))
+                _logger.info(
+                    "Could not find entry for '{}' in .netrc file.".format(url)
+                )
 
     # Prompt for password if we don't have credentials yet, or --prompt was set.
     if allow_prompt:
@@ -287,23 +308,30 @@ def get_credentials_for_url(url, opts, force_user=None):
 def save_password(url, username, password):
     if keyring:
         if ":" in username:
-            raise RuntimeError("Unable to store credentials if username contains a ':' ({})."
-                               .formta(username))
+            raise RuntimeError(
+                "Unable to store credentials if username contains a ':' ({}).".format(
+                    username
+                )
+            )
 
         try:
             # Note: we pass the url as `username` and username:password as `password`
             if password is None:
                 keyring.delete_password("pyftpsync", url)
-                write("Delete credentials from keyring ({})".format(url))
+                _logger.info("Delete credentials from keyring ({})".format(url))
             else:
-                keyring.set_password("pyftpsync", url, "{}:{}".format(username, password))
-                write("Store credentials in keyring ({}, {}:***).".format(url, username))
-#        except keyring.errors.TransientKeyringError:
+                keyring.set_password(
+                    "pyftpsync", url, "{}:{}".format(username, password)
+                )
+                _logger.info(
+                    "Store credentials in keyring ({}, {}:***).".format(url, username)
+                )
+        #        except keyring.errors.TransientKeyringError:
         except Exception as e:
-            write("Could not delete/set password {}.".format(e))
+            _logger.info("Could not delete/set password {}.".format(e))
             pass  # e.g. user clicked 'no'
     else:
-        write("Could not store credentials (missing keyring support).")
+        _logger.info("Could not store credentials (missing keyring support).")
     return
 
 
@@ -316,7 +344,8 @@ def str_to_bool(val):
         return False
     raise ValueError(
         "Invalid value '{}'"
-        "(expected '1', '0', 'true', 'false', 'on', 'off', 'yes', 'no').".format(val))
+        "(expected '1', '0', 'true', 'false', 'on', 'off', 'yes', 'no').".format(val)
+    )
 
 
 def ansi_code(name):
